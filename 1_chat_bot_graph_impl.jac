@@ -35,6 +35,55 @@ node todo{
     has todo_list:list = [];
 }
 
+walker query{
+    can make_subgraph with session entry{
+        
+        end = here;
+        end ++> (end := router());
+        end ++> RAG();
+        end ++> User_QA(user_data = here.user_data);
+        end ++> TODO(todo_list = here.todo_list);
+        visit end;
+    }
+}
+
+node router{
+    can choose_route with query entry;
+}
+:node:router:can:choose_route{
+    selection = "select the choice, (RAG,QA,TODO)" |> input;
+    if selection == "RAG"{
+        visit [-->](`?RAG)[0];
+    } elif selection == "QA"{
+        visit [-->](`?User_QA)[0];
+    } elif selection == "TODO"{
+        visit [-->](`?TODO)[0];
+    } else{
+        "Invalid choice" |> print;
+    }
+}
+node RAG{
+    can res with query entry{
+        "I am RAG" |> print;
+    }
+
+}
+node User_QA{
+    has user_data:dict = user_data;
+    can res with query entry{
+        "I will respond using user data " + str(self.user_data) |> print;
+    }
+}
+node TODO{
+    has todo_list:list = todo_list;
+    can res with query entry{
+        "I will respond using a user to-do list " + str(self.todo_list) |> print;
+    }
+}
+
+
+
+
 '''
 This is the chat walker which will be used to chat with the user.
 The create_session ability:
@@ -42,6 +91,7 @@ The create_session ability:
     - Creates a new session with the user data and todo list.
     - Spawns the chat session with the session id.
 '''
+
 walker chat{
 
     can create_session with user entry{
@@ -56,6 +106,7 @@ walker chat{
                             user_data = data_node.user_data,
                             todo_list = todo_node.todo_list
                         );
+        query() spawn [-->](`?session)[0];
         visit n;
     }
 
