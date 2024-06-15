@@ -1,8 +1,8 @@
 import:py random;
-import:py from jaclang.core.llms, Anthropic;
+import:py from jaclang.core.llms, Ollama;
 
 
-glob llm = Anthropic(model_name="claude-3-sonnet-20240229");
+glob llm = Ollama();
 
 '''
 User node has user_name attribute.
@@ -105,11 +105,21 @@ This is the TODO chat node which will be used to chat with the user using the to
 node todo_chat {
     can run_todo with query entry {
         print('routed --> TODO');
-        print(self.chat_llm(todo_list=here.todo_list,query=here.query));
+         here.query:str=input('Enter your query : ');
+         here.session_chat_history.append(here.query);
+        a:str=(self.chat_llm(todo_list=here.todo_list,user_data=here.user_data,chat_history=here.session_chat_history,query=here.query));
+        here.session_chat_history.append(a);
+        print(a);
+        if(here.query != 'exit'){
+            self.run_todo(here);
+
+    }
     }
 
     can 'You are a Health Assistant. Give a response based on the query using my todo list.'
-    chat_llm(todo_list:'data about the health status of the user':list,
+    chat_llm(todo_list:'data about the health status of the user':list, 
+            user_data:'data about the user':dict,
+            chat_history:'chat history between user and health assistant. Odd entries are from user. even enries are from health assistant.':str,
              query:'The tasks to be done by the user in the future.':str) -> 'response':str by llm();
 }
 
@@ -120,7 +130,22 @@ TODO:Not yet implemented.
 node user_qa_chat {
     can run_user_qa with query entry {
         print('routed --> USER_QA');
+        here.query:str=input('Enter your query : ');
+         here.session_chat_history.append(here.query);
+        a:str=(self.chat_llm(user_data=here.user_data,chat_history=here.session_chat_history,query=here.query));
+        here.session_chat_history.append(a);
+        print(a);
+        if(here.query != 'exit'){
+            self.run_user_qa(here);
+
+        }
     }
+    can 'You are a Health Assistant. Give a response based on the query using user data dict.'
+    chat_llm(user_data:'data about the user':dict,
+            chat_history:'chat history between user and health assistant. Odd entries are from user. even enries are from health assistant.':str,
+             query:'The tasks to be done by the user in the future.':str) -> 'response':str by llm();
+
+    
 }
 
 with entry {
@@ -169,7 +194,8 @@ with entry {
     self.user_data:dict = here.user_data;
     self.todo_list:list = here.todo_list;
     self.task_type:str = input('What is the routing method : ');
-    self.query:str = input('Enter your query : ');
+    #self.query:str = input('Enter your query : ');
+    #self.session_chat_history.append(self.query);
 
     end = here;
     end ++> (end := router());
